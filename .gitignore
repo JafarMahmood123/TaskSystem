@@ -1,0 +1,46 @@
+## .NET Specific
+bin/
+obj/
+out/
+publish/
+dist/
+
+## User-specific files (Visual Studio / VS Code / Rider)
+.vs/
+.vscode/
+.idea/
+*.user
+*.userosscache
+*.sln.docstates
+
+## Secrets and Local Config
+# We keep appsettings.json, but ignore user secrets
+appsettings.Development.json
+secrets.json
+.env
+
+## OS Specific (Linux/Ubuntu)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V10
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+*.swp
+*.lock
+
+## Docker
+.dockerignore
+# Ignore actual database data if you mount a local folder
+pgdata/
+redisdata/
+
+## Logs
+*.log
+logs/
+
+## EF Core
+# Note: Do NOT ignore Migrations folder, but ignore the scripts
+*.sql
