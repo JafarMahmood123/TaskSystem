@@ -1,7 +1,8 @@
-version: '3.8'
-services:
+services: 
   postgres:
     image: postgres:latest
+    container_name: postgres_db
+    restart: always
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -11,11 +12,32 @@ services:
 
   redis:
     image: redis:latest
+    container_name: redis_cache
+    restart: always
     ports:
       - "6379:6379"
 
   rabbitmq:
     image: rabbitmq:3-management
+    container_name: rabbitmq_broker
+    restart: always
     ports:
       - "5672:5672"
-      - "15672:15672" 
+      - "15672:15672"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: task_api
+    ports:
+      - "5000:8080"  
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    environment:
+      - ConnectionStrings__Postgres=Host=postgres;Database=taskdb;Username=user;Password=password
+      - ConnectionStrings__Redis=redis:6379
+      - ConnectionStrings__RabbitMQ=rabbitmq
+      - ASPNETCORE_ENVIRONMENT=Development

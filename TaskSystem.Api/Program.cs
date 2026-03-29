@@ -1,4 +1,6 @@
-using TaskSystem.Infrastructure; 
+using Microsoft.EntityFrameworkCore;
+using TaskSystem.Infrastructure;
+using TaskSystem.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +15,25 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddInfrastructure(builder.Configuration); 
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        // Checks if the DB exists and applies any pending migrations
+        if (context.Database.GetPendingMigrations().Any())
+        {
+            context.Database.Migrate();
+            Console.WriteLine("--> Database Migrations Applied.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"--> Error applying migrations: {ex.Message}");
+    }
+}
 
 app.UseSwagger();
 app.UseSwaggerUI();
