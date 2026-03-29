@@ -1,8 +1,10 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TaskSystem.Application.Abstractions;
 using TaskSystem.Infrastructure.Caching;
+using TaskSystem.Infrastructure.Messaging;
 using TaskSystem.Infrastructure.Persistence;
 
 namespace TaskSystem.Infrastructure;
@@ -27,6 +29,26 @@ public static class DependencyInjection
 
         // 4. Register Cache Service
         services.AddSingleton<ICacheService, RedisCacheService>();
+
+        // 5. Setup RabbitMQ with MassTransit
+        services.AddMassTransit(x =>
+        {
+            // Register the Consumer
+            x.AddConsumer<TaskCreatedConsumer>();
+
+            x.UsingRabbitMq((context, cfg) =>
+            {
+                cfg.Host(configuration.GetConnectionString("RabbitMQ"), h =>
+                {
+                    h.Username("guest");
+                    h.Password("guest");
+                });
+
+                cfg.ConfigureEndpoints(context);
+            });
+        });
+
+        services.AddScoped<IMessageBus, MessageBus>();
 
         return services;
     }

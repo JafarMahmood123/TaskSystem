@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TaskSystem.Application.Abstractions;
 using TaskSystem.Domain.Entities;
+using TaskSystem.Domain.Events;
 
 namespace TaskSystem.Api.Controllers;
 
@@ -10,12 +11,14 @@ public class TasksController : ControllerBase
 {
     private readonly ITaskRepository _repository;
     private readonly ICacheService _cache;
+    private readonly IMessageBus _messageBus;
     private const string TasksCacheKey = "all_tasks_key";
 
-    public TasksController(ITaskRepository repository, ICacheService cache)
+    public TasksController(ITaskRepository repository, ICacheService cache, IMessageBus messageBus)
     {
         _repository = repository;
         _cache = cache;
+        _messageBus = messageBus;
     }
 
     [HttpGet]
@@ -37,10 +40,19 @@ public class TasksController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(TaskItem task)
     {
+        // Save to Postgres
         var createdTask = await _repository.CreateAsync(task);
-        
-        // Invalidate Cache 
+    
+        // Clear Redis Cache
         await _cache.RemoveAsync(TasksCacheKey);
+
+        // Publish to RabbitMQ 
+        await _messageBus.PublishAsync(new TaskCreatedEvent 
+        { 
+            Id = createdTask.Id, 
+            Title = createdTask.Title, 
+            CreatedAt = createdTask.CreatedAt 
+        });
 
         return Ok(createdTask);
     }
