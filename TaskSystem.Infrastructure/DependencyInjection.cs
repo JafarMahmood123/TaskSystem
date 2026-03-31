@@ -2,6 +2,8 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using RabbitMQ.Client;
 using StackExchange.Redis;
 using TaskSystem.Application.Abstractions;
 using TaskSystem.Infrastructure.Caching;
@@ -64,6 +66,30 @@ public static class DependencyInjection
         });
 
         services.AddHostedService<RedisSubscriberWorker>();
+
+        services.AddHealthChecks()
+    .AddNpgSql(
+        connectionString: configuration.GetConnectionString("Postgres")!,
+        name: "PostgreSQL",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "db", "sql", "postgres" })
+    .AddRedis(
+        redisConnectionString: configuration.GetConnectionString("Redis")!,
+        name: "Redis",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "cache", "redis" })
+    .AddRabbitMQ(
+        factory: sp =>
+        {
+            var factory = new ConnectionFactory()
+            {
+                Uri = new Uri($"amqp://guest:guest@{configuration.GetConnectionString("RabbitMQ")}/")
+            };
+            return factory.CreateConnectionAsync();
+        },
+        name: "RabbitMQ",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "broker", "rabbitmq" });
 
         return services;
     }
