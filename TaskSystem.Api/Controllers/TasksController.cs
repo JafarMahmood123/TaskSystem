@@ -40,20 +40,11 @@ public class TasksController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(TaskItem task)
     {
-        // Save to Postgres
+        // The repository handles saving the task AND the outbox message in one transaction
         var createdTask = await _repository.CreateAsync(task);
-    
-        // Clear Redis Cache
+
         await _cache.RemoveAsync(TasksCacheKey);
 
-        // Publish to RabbitMQ 
-        await _messageBus.PublishAsync(new TaskCreatedEvent 
-        { 
-            Id = createdTask.Id, 
-            Title = createdTask.Title, 
-            CreatedAt = createdTask.CreatedAt 
-        });
-
-        return Ok(createdTask);
+        return Ok(createdTask); // RabbitMQ will be handled by the OutboxProcessor automatically!
     }
 }

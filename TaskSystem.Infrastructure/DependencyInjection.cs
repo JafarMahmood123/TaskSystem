@@ -50,6 +50,8 @@ public static class DependencyInjection
 
         services.AddScoped<IMessageBus, MessageBus>();
 
+        services.AddHostedService<OutboxProcessor>();
+
         return services;
     }
 }
