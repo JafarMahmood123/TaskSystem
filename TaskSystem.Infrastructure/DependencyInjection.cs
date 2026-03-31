@@ -2,6 +2,7 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
 using TaskSystem.Application.Abstractions;
 using TaskSystem.Infrastructure.Caching;
 using TaskSystem.Infrastructure.Messaging;
@@ -51,6 +52,18 @@ public static class DependencyInjection
         services.AddScoped<IMessageBus, MessageBus>();
 
         services.AddHostedService<OutboxProcessor>();
+
+        // Inside AddInfrastructure method:
+        var redisConnectionString = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+        var redisConnection = ConnectionMultiplexer.Connect(redisConnectionString);
+        services.AddSingleton<IConnectionMultiplexer>(redisConnection);
+
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = redisConnectionString;
+        });
+
+        services.AddHostedService<RedisSubscriberWorker>();
 
         return services;
     }

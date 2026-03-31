@@ -43,8 +43,35 @@ public class TasksController : ControllerBase
         // The repository handles saving the task AND the outbox message in one transaction
         var createdTask = await _repository.CreateAsync(task);
 
-        await _cache.RemoveAsync(TasksCacheKey);
+        // Broadcast a real-time message via Redis Pub/Sub
+        // This could be picked up by a WebSockets/SignalR hub to update a frontend UI
+        await _cache.PublishAsync("task_updates", $"New Task Created: {createdTask.Title}");
 
         return Ok(createdTask); // RabbitMQ will be handled by the OutboxProcessor automatically!
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        string cacheKey = $"task_{id}";
+
+        // 1. Try to get from Cache (Redis)
+        var cachedTask = await _cache.GetAsync<TaskItem>(cacheKey);
+        if (cachedTask != null)
+        {
+            Console.WriteLine("--> Cache Hit! Returning from Redis.");
+            return Ok(cachedTask);
+        }
+
+        // 2. Cache Miss - Get from Database (Postgres)
+        Console.WriteLine("--> Cache Miss! Going to Postgres.");
+        var task = await _repository.GetById(id); // Use DbContext directly or Repository
+
+        if (task == null) return NotFound();
+
+        // 3. Save to Cache for future requests (Cache-Aside)
+        await _cache.SetAsync(cacheKey, task, TimeSpan.FromMinutes(10));
+
+        return Ok(task);
     }
 }

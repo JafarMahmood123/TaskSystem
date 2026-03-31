@@ -53,4 +53,9 @@ public class TaskRepository : ITaskRepository
     {
         return await _context.Tasks.ToListAsync();
     }
+
+    public async Task<TaskItem?> GetById(Guid id)
+    {
+        return await _context.Tasks.FindAsync(id);
+    }
 }
